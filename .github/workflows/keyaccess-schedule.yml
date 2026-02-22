@@ -13,8 +13,9 @@ name: KeyAccess - Processar e enviar
 
 on:
   schedule:
-    # Executa todo dia às 08:00 UTC (05:00 BRT)
-    - cron: '0 8 * * *'
+    # 0h e 12h (horário de Brasília) = 03:00 e 15:00 UTC
+    - cron: '0 3 * * *'
+    - cron: '0 15 * * *'
   workflow_dispatch:
     # Permite rodar manualmente em Actions > KeyAccess - Processar e enviar > Run workflow
 
