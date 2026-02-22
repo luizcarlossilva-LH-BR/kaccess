@@ -1,0 +1,1081 @@
+ 
+ 
+ 
+ 
+KeyAccess - Rua Helena, 418 – 1º andar – 04552-050 – Vila Olímpia – SP – sac@keyaccess.com.br 
+ 
+_________________________________________________________________________________________________________________________________________________ 
+ 
+Demonstração do Caso de Uso – Logística  
+V3: outubro/2023 
+1. Sumário 
+1. LOGIN .................................................................................................................................................... 3 
+2. CRIAR EVENTO DE ENTRADA ................................................................................................................. 4 
+3. BUSCAR ANFITRIÕES ............................................................................................................................. 6 
+4. CRIAR EVENTO DE SAÍDA ....................................................................................................................... 7 
+5. ATUALIZAR EVENTO .............................................................................................................................. 9 
+6. REMOVER EVENTO .............................................................................................................................. 11 
+7. OBTER OS EVENTOS ............................................................................................................................ 12 
+ 
+ 
+ 
+ 
+ 
+KeyAccess - Rua Helena, 418 – 1º andar – 04552-050 – Vila Olímpia – SP – sac@keyaccess.com.br 
+ 
+_________________________________________________________________________________________________________________________________________________ 
+ 
+Recomendamos a utilização da ferramenta Postman, nela é possível criar uma pasta com as chamadas da 
+integração. Ajuda muito na hora de testar. 
+ 
+Para todas as requisições, exceto login, é necessário enviar o companyInstanceName, esta informação será 
+fornecida por nós. 
+companyInstanceName para homologaão = <sera fornecido> 
+client-id em homol = <sera fornecido> 
+client-secret em homol = <sera fornecido> 
+
+ 
+ 
+ 
+ 
+KeyAccess - Rua Helena, 418 – 1º andar – 04552-050 – Vila Olímpia – SP – sac@keyaccess.com.br 
+ 
+_________________________________________________________________________________________________________________________________________________ 
+ 
+1. LOGIN 
+ 
+ 
+Devemos preencher a aba header com Authorization: Basic No body temos que enviar grant_type e scope 
+ 
+URL: https://h.visitantes.online/auth/login/client 
+Method: POST 
+Header: Authorization: Basic <base64(client_id:client_secret)> 
+Body: {“grant_type”:”client_credentials”, “scope”:”cloud-system-rw”} 
+Response: 
+ 
+O token retornado sempre será do tipo 
+bearer, sendo que para as demais chamadas 
+deve-se utilizar no Header:  
+Authorization: Bearer eyJhG..... 
+ 
+O atributo expires_in diz por quanto tempo o 
+token é válido. No caso de client_credentials 
+o valor padrão é 24 horas. 
+ 
+É importante ressaltar que  não é possível se 
+logar na interface gráfica utilizado 
+client_credentials. 
+ 
+E tanto client_id quanto client_secret serão 
+fornecidos por nós. 
+
+ 
+ 
+ 
+ 
+KeyAccess - Rua Helena, 418 – 1º andar – 04552-050 – Vila Olímpia – SP – sac@keyaccess.com.br 
+ 
+_________________________________________________________________________________________________________________________________________________ 
+ 
+2. CRIAR EVENTO DE ENTRADA 
+ 
+ 
+URL: https://api-homol.visitantes.online/api/logistics/<companyInstanceName>/events 
+Method: POST 
+Header: Authorization: Bearer <token obtido no login> 
+Body:  
+{ 
+    "title": "teste", 
+    "startAt": "2021-04-12T11:34:38Z", 
+    "endAt": "2021-04-13T02:34:38Z", 
+    "behavior": "ENTRY", 
+    "target": "LOGISTIC", 
+    "autoRelease": false, 
+    "hostRefId": 11, 
+    "driver": { 
+        "fullName": "Fa*** D**o O****", 
+        "document": "2714423****", 
+        "licensePlateOne": "aaa1111", 
+        "onFoot": false 
+    }, 
+    "assistants": [ 
+        { 
+            "fullName": "Pa*** Carr***", 
+            "document": "3753886****" 
+        } 
+    ] 
+} 
+ 
+Essa API é para cadastrar o evento e seus convidados (motorista e acompanhantes), veja que temos que ter um 
+anfitrião (host), ele deverá ser indicado no hostRefId e pode ser sempre o mesmo. Para selecionar qual host 
+utilizar veja no item 3. Já para convidados existem dois tipos, o motorista (driver) e os ajudantes (assistants), o 
+motorista é apenas um, já os ajudantes podem ser vários. Nenhum deles é obrigatório cadastro prévio, porém caso 
+
+ 
+ 
+ 
+ 
+KeyAccess - Rua Helena, 418 – 1º andar – 04552-050 – Vila Olímpia – SP – sac@keyaccess.com.br 
+ 
+_________________________________________________________________________________________________________________________________________________ 
+ 
+não seja feito no momento do checkin uma notificação será enviada aos usuários do tipo expedição da empresa, 
+para que façam aprovação/liberação das pessoas (motorista ou ajudantes).  
+Os itens em amarelo podem ser mantidos com esses valores. O valor autoRelease diz se é necessária liberação 
+para acesso, se for, durante o checkin o convidado terá que aguardar alguém com tipo de acesso expedição da 
+empresa liberar a entrada. 
+Para o motorista são obrigatórios: Nome completo, CPF e placa do carro. 
+Para os ajudantes, se forem pré-cadastrados, são obrigatórios: Nome completo e CPF.  
+Ao término do cadastro alguns valores são importantes, são eles o “id” do evento para futura 
+busca/edição/remoçao por ID e o “fullPathLocator” que é o link para checkin. 
+    "fullPathLocator": "https://h.visitante.in/?l=KDJBPB", 
+Este link já é direcionado para o evento pois contém seu código localizador, no caso “KDJBPB”. 
+ 
+ 
+ 
+ 
+ 
+KeyAccess - Rua Helena, 418 – 1º andar – 04552-050 – Vila Olímpia – SP – sac@keyaccess.com.br 
+ 
+_________________________________________________________________________________________________________________________________________________ 
+ 
+3. BUSCAR ANFITRIÕES 
+ 
+ 
+ 
+URL: https://api-
+homol.visitantes.online/api/people/<companyInstanceName>/gf?&sort=name,asc&size=1000&name.contains
+=&platformStatus.equals=IDENTIFIED&name.contains= 
+Method: GET 
+Header: Authorization: Bearer <token obtido no login> 
+Body: NA 
+Essa API deve trazer os colaboradores validados (platformStatus.equals=IDENTIFIED) podendo filtrar usando 
+primeiro e ultimo nome, então para buscar alguém chamado “John doe” utilizamos o filtro 
+“&name.contains=john&name.contains=doe”. 
+A busca sempre trará uma lista, ainda que possa ser uma lista vazia ou  até com um único elemento. O dado 
+importante do colaborador é: refId. Ele deverá ser utilizado para gerar o evento no campo hostRefId conforme 
+explicado acima no item 2. 
+ 
+ 
+
+ 
+ 
+ 
+ 
+KeyAccess - Rua Helena, 418 – 1º andar – 04552-050 – Vila Olímpia – SP – sac@keyaccess.com.br 
+ 
+_________________________________________________________________________________________________________________________________________________ 
+ 
+4. CRIAR EVENTO DE SAÍDA 
+ 
+ 
+URL: https://api-homol.visitantes.online/api/logistics/<companyInstanceName>/events 
+Method: POST 
+Header: Authorization: Bearer <token obtido no login> 
+Body:  
+{ 
+    "title": "teste ", 
+    "startAt": "2021-04-12T11:34:38Z", 
+    "endAt": "2021-04-13T02:34:38Z", 
+    "behavior": "EXIT", 
+    "target": "LOGISTIC", 
+    "autoRelease": false, 
+    "hostRefId": 11, 
+    "driver": { 
+        "fullName": "Fa*** D**o O****", 
+        "document": "2714423****", 
+        "licensePlateOne": "aaa1111", 
+        "onFoot": false 
+    }, 
+    "assistants": [ 
+        { 
+            "fullName": "Pa*** Carr***", 
+            "document": "3753886****" 
+        } 
+    ] 
+} 
+ 
+Essa API é para cadastrar o evento de saída é o mesmo utilizado no item 2 para criar evento de entrada os seus 
+convidados (motorista e acompanhantes) devem ser os mesmos do evento de entrada). O mesmo json pode ser 
+utilizado, com uma única diferença: behavior para saída o valor deve ser EXIT. 
+
+ 
+ 
+ 
+ 
+KeyAccess - Rua Helena, 418 – 1º andar – 04552-050 – Vila Olímpia – SP – sac@keyaccess.com.br 
+ 
+_________________________________________________________________________________________________________________________________________________ 
+ 
+Os itens em amarelo podem ser mantidos com esses valores. O valor autoRelease diz se é necessária liberação 
+para acesso, se for, durante o checkin o convidado terá que aguardar alguém com tipo de acesso expedição da 
+empresa liberar a entrada. 
+Para o motorista são obrigatórios: Nome completo, CPF e placa do carro  e devem ser os mesmos do evento de 
+entrada. 
+Para os ajudantes, se forem pré-cadastrados, são obrigatórios: Nome completo e CPF e devem ser os mesmos do 
+evento de entrada.  
+Ao término do cadastro apenas repare se o retorno do request foi 200. Quanto  ao “fullPathLocator” que é o link 
+para checkin, não é necessário, o QR para saída é o mesmo da entrada, podendo ser recuperado ou feito novo 
+checkin utilizando o link de ENTRADA. 
+ 
+  
+ 
+ 
+ 
+ 
+KeyAccess - Rua Helena, 418 – 1º andar – 04552-050 – Vila Olímpia – SP – sac@keyaccess.com.br 
+ 
+_________________________________________________________________________________________________________________________________________________ 
+ 
+5. ATUALIZAR EVENTO 
+ 
+ 
+URL: https://api-homol.visitantes.online/api/logistics/<companyInstanceName>/events 
+Method: PUT 
+Header: Authorization: Bearer <token obtido no login> 
+Body:  
+{ 
+    "id": 2, 
+    "title": "teste ", 
+    "startAt": "2021-04-12T11:34:38Z", 
+    "endAt": "2021-04-12T23:34:38Z", 
+    "status": "OPENED", 
+    "behavior": "ENTRY", 
+    "target": "LOGISTIC", 
+    "autoRelease": false, 
+    "checkinStarted": true, 
+    "finalized": false, 
+    "locator": "KDJBPB", 
+    "fullPathLocator": "https://h.visitante.in/?l=KDJBPB", 
+    "notes": null, 
+    "driver": { 
+        "inviteId": 3, 
+        "eventId": 2, 
+        "fullName": "F***o D**o Or***", 
+        "document": "271442*****", 
+        "refId": 9, 
+        "status": "WAITING_FOR_CHECKIN", 
+        "licensePlateOne": "aaa1111", 
+        "licensePlateTwo": null, 
+        "hasCart": false, 
+        "onFoot": false, 
+        "registrationMatches": true, 
+        "lastModifiedDate": "2021-04-12T12:15:09Z" 
+    }, 
+    "company": { 
+        "name": "Empresa", 
+        "type": "COMPANY", 
+        "instanceName": "companyhomollogistic01", 
+        "site": { 
+            "name": "Golgi Arujá", 
+            "type": "SITE", 
+
+ 
+ 
+ 
+ 
+KeyAccess - Rua Helena, 418 – 1º andar – 04552-050 – Vila Olímpia – SP – sac@keyaccess.com.br 
+ 
+_________________________________________________________________________________________________________________________________________________ 
+ 
+            "instanceName": "sitehomollogistic01", 
+            "requireFaceImage": true 
+        } 
+    }, 
+    "autoGenerated": false, 
+    "assistants": [ 
+        { 
+            "inviteId": 4, 
+            "eventId": 2, 
+            "fullName": "Pa*** Car****", 
+            "document": "375388*****", 
+            "refId": 6, 
+            "status": "WAITING_FOR_CHECKIN", 
+            "registrationMatches": true, 
+            "lastModifiedDate": "2021-04-12T12:15:09Z" 
+        } 
+    ], 
+    "hostRefId": 11, 
+    "operations": [ 
+        { 
+            "id": 3, 
+            "eventId": 2, 
+            "refId": null, 
+            "operatorName": "KeyAccess Cloud System", 
+            "action": "LOGISTIC_EVENT_CREATED", 
+            "createdDate": "2021-04-12T12:15:09Z" 
+        } 
+    ] 
+} 
+ 
+O ideal é pegar o evento utilizando a chamada do item 9.a e alterar o que for necessário. Lembrando que 
+alterações nos eventos só serão possíveis antes do primeiro checkin ser feito.   
+ 
+ 
+ 
+ 
+KeyAccess - Rua Helena, 418 – 1º andar – 04552-050 – Vila Olímpia – SP – sac@keyaccess.com.br 
+ 
+_________________________________________________________________________________________________________________________________________________ 
+ 
+6. REMOVER EVENTO 
+ 
+ 
+URL: https://api-homol.visitantes.online/api/logistics/<companyInstanceName>/events/{eventId} 
+Method: DELETE 
+Header: Authorization: Bearer <token obtido no login> 
+Será removido o evento cujo id seja igual ao passado na URL  
+
+ 
+ 
+ 
+ 
+KeyAccess - Rua Helena, 418 – 1º andar – 04552-050 – Vila Olímpia – SP – sac@keyaccess.com.br 
+ 
+_________________________________________________________________________________________________________________________________________________ 
+ 
+ 
+7. OBTER OS EVENTOS 
+a. Por ID com detalhes 
+ 
+ 
+URL: https://api-homol.visitantes.online/api/logistics/<companyInstanceName>/events/{eventId}/details 
+Method: GET 
+Header: Authorization: Bearer <token obtido no login> 
+Será retornado o evento cujo id seja igual ao passado na URL, com detalhes como documentos.  
+ 
+b. Por ID sem detalhes 
+ 
+
+ 
+ 
+ 
+ 
+KeyAccess - Rua Helena, 418 – 1º andar – 04552-050 – Vila Olímpia – SP – sac@keyaccess.com.br 
+ 
+_________________________________________________________________________________________________________________________________________________ 
+ 
+ 
+URL: https://api-homol.visitantes.online/api/logistics/<companyInstanceName>/events/{eventId} 
+Method: GET 
+Header: Authorization: Bearer <token obtido no login> 
+Será retornado o evento cujo id seja igual ao passado na URL, sem detalhes como documentos. 
+ 
+c. Lista de Eventos Logisticos 
+ 
+ 
+URL: https://api-
+homol.visitantes.online/api/logistics/<companyInstanceName>/events/{eventId}?sort=startAt,asc&size=100 
+Method: GET 
+Header: Authorization: Bearer <token obtido no login> 
+Serão retornados os eventos do dia paginados de acordo com os parâmetros passados na URL, sem detalhes como 
+documentos. 
+Além de sort e size outros query parameters podem ser passados:  
+driverFirstName.contains 
+driverFirstName.contains 
+driverFirstName.doesNotContain 
+driverFirstName.equals 
+driverFirstName.in 
+driverFirstName.notEquals 
+driverFirstName.notIn 
+driverFirstName.specified 
+driverLastName.contains 
+driverLastName.doesNotContain 
+driverLastName.equals 
+driverLastName.in 
+
+ 
+ 
+ 
+ 
+KeyAccess - Rua Helena, 418 – 1º andar – 04552-050 – Vila Olímpia – SP – sac@keyaccess.com.br 
+ 
+_________________________________________________________________________________________________________________________________________________ 
+ 
+driverLastName.notEquals 
+driverLastName.notIn 
+driverLastName.specified 
+driverLicensePlateOne.contains 
+driverLicensePlateOne.doesNotContain 
+driverLicensePlateOne.equals 
+driverLicensePlateOne.in 
+driverLicensePlateOne.notEquals 
+driverLicensePlateOne.notIn 
+driverLicensePlateOne.specified 
+driverLicensePlateTwo.contains 
+driverLicensePlateTwo.doesNotContain 
+driverLicensePlateTwo.equals 
+driverLicensePlateTwo.in 
+driverLicensePlateTwo.notEquals 
+driverLicensePlateTwo.notIn 
+driverLicensePlateTwo.specified 
+eventBehavior.equals --> Available values : ENTRY, EXIT 
+eventBehavior.in 
+eventBehavior.notEquals 
+eventBehavior.notIn 
+eventBehavior.specified 
+eventEndAt.equals 
+eventEndAt.greaterThan 
+eventEndAt.greaterThanOrEqual 
+eventEndAt.lessThan 
+eventEndAt.lessThanOrEqual 
+eventEndAt.notEquals 
+eventEndAt.specified 
+eventLocator.contains 
+eventLocator.doesNotContain 
+eventLocator.equals 
+eventLocator.in 
+eventLocator.notEquals 
+eventLocator.notIn 
+eventLocator.specified 
+eventStartAt.equals 
+eventStartAt.greaterThan 
+eventStartAt.greaterThanOrEqual 
+eventStartAt.lessThan 
+eventStartAt.lessThanOrEqual 
+eventStartAt.notEquals 
+eventStartAt.specified 
+eventTitle.contains 
+eventTitle.doesNotContain 
+eventTitle.equals 
+eventTitle.in 
+eventTitle.notEquals 
+eventTitle.notIn 
+eventTitle.specified 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+KeyAccess - Rua Helena, 418 – 1º andar – 04552-050 – Vila Olímpia – SP – sac@keyaccess.com.br 
+ 
+_________________________________________________________________________________________________________________________________________________ 
+ 
+d. Lista de Eventos 
+  
+ 
+URL: https://api-
+homol.visitantes.online/api/events/<companyInstanceName>?sort=startAt,asc&size=10&page=2&endAt.great
+erOrEqualThan=2022-10-02T22:59:17.637Z&target.equals=LOGISTIC 
+Method: GET 
+Header: Authorization: Bearer <token obtido no login> 
+Serão retornados os eventos do dia paginados de acordo com os parâmetros passados na URL, sem detalhes como 
+documentos. 
+Além de sort, size e page outros query parameters podem ser passados: 
+allowCompanion.equals 
+allowCompanion.in 
+allowCompanion.notEquals 
+allowCompanion.notIn 
+allowCompanion.specified 
+autoRelease.equals 
+autoRelease.in 
+autoRelease.notEquals 
+autoRelease.notIn 
+autoRelease.specified 
+checkinStartAt.equals 
+checkinStartAt.equals 
+checkinStartAt.greaterThan 
+checkinStartAt.greaterThan 
+checkinStartAt.greaterThanOrEqu
+al 
+checkinStartAt.greaterThanOrEqu
+al 
+checkinStartAt.in 
+checkinStartAt.lessThan 
+checkinStartAt.lessThan 
+checkinStartAt.lessThanOrEqual 
+checkinStartAt.lessThanOrEqual 
+checkinStartAt.notEquals 
+endAt.equals 
+endAt.equals 
+endAt.greaterThan 
+endAt.greaterThan 
+endAt.greaterThanOrEqual 
+endAt.greaterThanOrEqual 
+endAt.in[0].epochSecond 
+endAt.in[0].epochSecond 
+endAt.in[0].nano 
+endAt.in[0].nano 
+endAt.lessThan 
+endAt.lessThan 
+endAt.lessThanOrEqual 
+endAt.lessThanOrEqual 
+endAt.notEquals 
+endAt.notEquals 
+endAt.notIn[0].epochSecond 
+endAt.notIn[0].epochSecond 
+endAt.notIn[0].nano 
+endAt.notIn[0].nano 
+endAt.specified 
+floor.contains 
+host.equals 
+host.in 
+multiCheckin.equals 
+multiCheckin.in 
+multiCheckin.notEquals 
+multiCheckin.notIn 
+multiCheckin.specified 
+page 
+size 
+sort 
+startAt.equals 
+startAt.equals 
+startAt.greaterThan 
+startAt.greaterThan 
+startAt.greaterThanOrEqual 
+startAt.greaterThanOrEqual 
+startAt.in[0].epochSecond 
+startAt.in[0].epochSecond 
+startAt.in[0].nano 
+startAt.in[0].nano 
+startAt.lessThan 
+startAt.lessThan 
+startAt.lessThanOrEqual 
+startAt.lessThanOrEqual 
+startAt.notEquals 
+startAt.notEquals 
+
+ 
+ 
+ 
+ 
+KeyAccess - Rua Helena, 418 – 1º andar – 04552-050 – Vila Olímpia – SP – sac@keyaccess.com.br 
+ 
+_________________________________________________________________________________________________________________________________________________ 
+ 
+checkinStartAt.notEquals 
+checkinStartAt.notIn 
+checkinStartAt.specified 
+createdBy.contains 
+createdBy.contains 
+createdBy.doesNotContain 
+createdBy.doesNotContain 
+createdBy.equals 
+createdBy.equals 
+createdBy.in 
+createdBy.notEquals 
+createdBy.notEquals 
+createdBy.notIn 
+createdBy.specified 
+createdDate.equals 
+createdDate.equals 
+createdDate.greaterThan 
+createdDate.greaterThan 
+createdDate.greaterThanOrEqual 
+createdDate.greaterThanOrEqual 
+createdDate.in[0].epochSecond 
+createdDate.in[0].epochSecond 
+createdDate.in[0].nano 
+createdDate.in[0].nano 
+createdDate.lessThan 
+createdDate.lessThan 
+createdDate.lessThanOrEqual 
+createdDate.lessThanOrEqual 
+createdDate.notEquals 
+createdDate.notEquals 
+createdDate.notIn[0].epochSecon
+d 
+createdDate.notIn[0].epochSecon
+d 
+createdDate.notIn[0].nano 
+createdDate.notIn[0].nano 
+createdDate.specified 
+floor.contains 
+floor.doesNotContain 
+floor.doesNotContain 
+floor.equals 
+floor.equals 
+floor.in 
+floor.notEquals 
+floor.notEquals 
+floor.notIn 
+floor.specified 
+floorCode.contains 
+floorCode.contains 
+floorCode.doesNotContain 
+floorCode.doesNotContain 
+floorCode.equals 
+floorCode.equals 
+floorCode.in 
+floorCode.notEquals 
+floorCode.notEquals 
+host.notEquals 
+host.notIn 
+host.specified 
+hostsId.equals 
+hostsId.equals 
+hostsId.greaterThan 
+hostsId.greaterThan 
+hostsId.greaterThanOrEqual 
+hostsId.greaterThanOrEqual 
+hostsId.in 
+hostsId.lessThan 
+hostsId.lessThan 
+hostsId.lessThanOrEqual 
+hostsId.lessThanOrEqual 
+hostsId.notEquals 
+hostsId.notEquals 
+hostsId.notIn 
+hostsId.specified 
+id.equals 
+id.equals 
+id.greaterThan 
+id.greaterThan 
+id.greaterThanOrEqual 
+id.greaterThanOrEqual 
+id.in 
+id.lessThan 
+id.lessThan 
+id.lessThanOrEqual 
+id.lessThanOrEqual 
+id.notEquals 
+id.notEquals 
+id.notIn 
+id.specified 
+lastModifiedBy.contains 
+lastModifiedBy.contains 
+lastModifiedBy.doesNotContain 
+lastModifiedBy.doesNotContain 
+lastModifiedBy.equals 
+lastModifiedBy.equals 
+lastModifiedBy.in 
+lastModifiedBy.notEquals 
+lastModifiedBy.notEquals 
+lastModifiedBy.notIn 
+lastModifiedBy.specified 
+lastModifiedDate.equals 
+lastModifiedDate.equals 
+lastModifiedDate.greaterThan 
+lastModifiedDate.greaterThan 
+lastModifiedDate.greaterThanOrEqua
+l 
+lastModifiedDate.greaterThanOrEqua
+l 
+lastModifiedDate.in[0].epochSecond 
+lastModifiedDate.in[0].epochSecond 
+lastModifiedDate.in[0].nano 
+lastModifiedDate.in[0].nano 
+startAt.notIn[0].epochSecond 
+startAt.notIn[0].epochSecond 
+startAt.notIn[0].nano 
+startAt.notIn[0].nano 
+startAt.specified 
+status.equals => Available values : 
+OPENED, CLOSED, CANCELED, 
+WAITING_FOR_EVENT_APPROVE, 
+REPPROVED, APPROVED 
+status.in 
+status.notEquals 
+status.notIn 
+status.specified 
+target.equals => Available values : 
+BUILDING, LOGISTIC 
+target.in 
+target.notEquals 
+target.notIn 
+target.specified 
+timeZoneOffset.equals 
+timeZoneOffset.equals 
+timeZoneOffset.greaterThan 
+timeZoneOffset.greaterThan 
+timeZoneOffset.greaterThanOrEqu
+al 
+timeZoneOffset.greaterThanOrEqu
+al 
+timeZoneOffset.in 
+timeZoneOffset.lessThan 
+timeZoneOffset.lessThan 
+timeZoneOffset.lessThanOrEqual 
+timeZoneOffset.lessThanOrEqual 
+timeZoneOffset.notEquals 
+timeZoneOffset.notEquals 
+timeZoneOffset.notIn 
+timeZoneOffset.specified 
+title.contains 
+title.contains 
+title.doesNotContain 
+title.doesNotContain 
+title.equals 
+title.equals 
+title.in 
+title.notEquals 
+title.notEquals 
+title.notIn 
+title.specified 
+ 
+ 
+ 
+ 
+ 
+KeyAccess - Rua Helena, 418 – 1º andar – 04552-050 – Vila Olímpia – SP – sac@keyaccess.com.br 
+ 
+_________________________________________________________________________________________________________________________________________________ 
+ 
+floorCode.notIn 
+floorCode.specified 
+ 
+lastModifiedDate.lessThan 
+lastModifiedDate.lessThan 
+lastModifiedDate.lessThanOrEqual 
+lastModifiedDate.lessThanOrEqual 
+lastModifiedDate.notEquals 
+lastModifiedDate.notEquals 
+lastModifiedDate.notIn[0].epochSeco
+nd 
+lastModifiedDate.notIn[0].epochSeco
+nd 
+lastModifiedDate.notIn[0].nano 
+lastModifiedDate.notIn[0].nano 
+lastModifiedDate.specified 
+ 
+ 
+ 
+Retorno: 
+[ 
+  { 
+    "id": 5224, 
+    "title": "108a", 
+    "startAt": "2023-09-04T03:00:41Z", 
+    "endAt": "2023-09-05T02:59:41Z", 
+    "floor": null, 
+    "floorCode": null, 
+    "allowCompanion": false, 
+    "autoRelease": false, 
+    "checkinStartAt": 0, 
+    "multiCheckin": false, 
+    "timeZoneOffset": -180, 
+    "status": "CLOSED", 
+    "type": "ONCE", 
+    "target": "LOGISTIC", 
+    "behavior": "ENTRY", 
+    "useOwnLocator": false, 
+    "useLocatorPreAuthorized": false, 
+    "locatorPreAuthorized": false, 
+    "locator": "POGOZD", 
+    "fullPathLocator": "https://h.visitante.in/?l=POGOZD", 
+    "authorizersRefId": [], 
+    "checkinStarted": false, 
+    "company": { 
+      "id": 1, 
+      "name": "Empresa Alfa", 
+      "shortName": "Alfa", 
+      "code": "cloud#companyhomollogistic01#df0a36c9-e063-462e-be98-b9d47a9935ed", 
+      "address": "Edifício - Rua do Rio, 430, Vila, São Paulo - SP, Brasil", 
+      "site": { 
+        "id": 1, 
+        "name": " Arujá", 
+        "shortName": "GL01", 
+        "address": "Edifício - Rua do Rio, 430, Vila, São Paulo - SP, Brasil", 
+        "instanceName": "sitehomollogistic01", 
+        "instanceLocator": "gl01" 
+      } 
+    }, 
+ 
+ 
+ 
+ 
+KeyAccess - Rua Helena, 418 – 1º andar – 04552-050 – Vila Olímpia – SP – sac@keyaccess.com.br 
+ 
+_________________________________________________________________________________________________________________________________________________ 
+ 
+    "finalized": true, 
+    "autoGenerated": null, 
+    "group": null, 
+    "groupCode": null, 
+    "notes": "", 
+    "recurrent": false, 
+    "recurrenceDates": [], 
+    "approved": false, 
+    "approvedBy": null, 
+    "approvedDate": "2023-09-04T17:07:59Z", 
+    "notApprovedNotes": null, 
+    "eventRequestNotes": null, 
+    "version": 3, 
+    "lastModifiedDate": "2023-09-05T03:25:27Z", 
+    "nextOcurrence": "2023-09-04T00:00:41Z", 
+    "bookeis": [], 
+    "bookeisToCancel": null, 
+    "invites": [ 
+      { 
+        "inviteId": 98034, 
+        "eventId": 5224, 
+        "id": 18625, 
+        "firstName": "FA**", 
+        "lastName": "DE AC****", 
+        "fullName": "FA** DE AC***", 
+        "document": null, 
+        "email": null, 
+        "phone": null, 
+        "company": null, 
+        "status": "FINISHED", 
+        "host": false, 
+        "multiCheckin": false, 
+        "escort": false, 
+        "accompaniedInviteId": null, 
+        "authorized": true, 
+        "authorizerId": 31935, 
+        "visitedId": 31935, 
+        "checkinDate": "2023-09-04T17:11:55Z", 
+        "releaseDate": "2023-09-04T17:12:04Z", 
+        "refId": 128, 
+        "lastModifiedDate": "2023-09-05T03:25:27Z", 
+        "webToken": "eLGebqX0bSWRz5ipbGtYDo:***MjWHnLJpgr", 
+        "orign": 0, 
+        "startedFlowAsForeign": false, 
+        "startedFlowLocatorType": null, 
+        "startedFlowLocator": null, 
+        "startedFlowCheckinSourceType": null, 
+        "approved": false, 
+        "approvedBy": null, 
+        "approvedDate": null, 
+        "driver": true, 
+        "driverCandidate": false, 
+        "driverAssistant": false, 
+        "hasDriver": false, 
+        "licensePlateOne": "XXX1111", 
+        "licensePlateTwo": "XXX2222", 
+Data do Checkin 
+Placas do veículo 
+ 
+ 
+ 
+ 
+KeyAccess - Rua Helena, 418 – 1º andar – 04552-050 – Vila Olímpia – SP – sac@keyaccess.com.br 
+ 
+_________________________________________________________________________________________________________________________________________________ 
+ 
+        "hasCart": true, 
+        "onFoot": false, 
+        "askForFirstFaceImage": false, 
+        "requireFaceImage": false, 
+        "faceImage": null, 
+        "faceImageContentType": null, 
+        "registrationMatches": false, 
+        "inviteDate": "2023-09-04", 
+        "companyKaSiteCode": null, 
+        "createdBy": "ale***ilv**@gmail.com", 
+        "createdDate": "2023-09-04T17:07:59Z", 
+        "vehicleType": 8 
+      } 
+    ], 
+    "operations": [ 
+      { 
+        "id": 27223, 
+        "eventId": 5224, 
+        "refId": 31935, 
+        "operatorName": "John ***", 
+        "action": "LOGISTIC_EVENT_CREATED", 
+        "createdDate": "2023-09-04T17:08:00Z" 
+      }, 
+      { 
+        "id": 27224, 
+        "eventId": 5224, 
+        "refId": 31935, 
+        "operatorName": "John ***", 
+        "action": "LG_DRIVER_ADDED", 
+        "createdDate": "2023-09-04T17:08:00Z" 
+      }, 
+      { 
+        "id": 27225, 
+        "eventId": 5224, 
+        "refId": null, 
+        "operatorName": "system", 
+        "action": "LOGISTIC_DRIVER_ENTRY_WAITING_FOR_RELEASE", 
+        "createdDate": "2023-09-04T17:11:55Z" 
+      }, 
+      { 
+        "id": 27226, 
+        "eventId": 5224, 
+        "refId": 31935, 
+        "operatorName": "John ***", 
+        "action": "LOGISTIC_DRIVER_ENTRY_RELEASE_DONE", 
+        "createdDate": "2023-09-04T17:12:04Z" 
+      }, 
+      { 
+        "id": 27227, 
+        "eventId": 5224, 
+        "refId": null, 
+        "operatorName": "system", 
+        "action": "LOGISTIC_DRIVER_ENTRY_CHECKIN_DONE", 
+        "createdDate": "2023-09-04T17:12:04Z" 
+      }, 
+      { 
+Tipo do veiculo 
+ 
+ 
+ 
+ 
+KeyAccess - Rua Helena, 418 – 1º andar – 04552-050 – Vila Olímpia – SP – sac@keyaccess.com.br 
+ 
+_________________________________________________________________________________________________________________________________________________ 
+ 
+        "id": 27228, 
+        "eventId": 5224, 
+        "refId": null, 
+        "operatorName": "System", 
+        "action": "VO_INVITE_QR_PRINTED", 
+        "createdDate": "2023-09-04T17:12:10Z" 
+      }, 
+      { 
+        "id": 27230, 
+        "eventId": 5224, 
+        "refId": null, 
+        "operatorName": "KeyAccess Homol Logistic 01", 
+        "action": "LG_DVR_DC_ENT_REQ", 
+        "createdDate": "2023-09-04T17:15:52Z" 
+      }, 
+      { 
+        "id": 27231, 
+        "eventId": 5224, 
+        "refId": null, 
+        "operatorName": "KeyAccess Homol Logistic 01", 
+        "action": "LG_DVR_DC_ENT_ACK_ALM_SENSOR", 
+        "createdDate": "2023-09-04T17:15:52Z" 
+      }, 
+      { 
+        "id": 27232, 
+        "eventId": 5224, 
+        "refId": null, 
+        "operatorName": "KeyAccess Homol Logistic 01", 
+        "action": "LG_DVR_DC_EXT_REQ_ENF", 
+        "createdDate": "2023-09-04T17:16:01Z" 
+      }, 
+      { 
+        "id": 27233, 
+        "eventId": 5224, 
+        "refId": null, 
+        "operatorName": "KeyAccess Homol Logistic 01", 
+        "action": "LG_DVR_DC_EXT_ACK_ALM_SENSOR", 
+        "createdDate": "2023-09-04T17:16:02Z" 
+    ] 
+  } 
+] 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Tradução do “vehicleType”: 
+1 A pé 
+2 Moto 
+3 Carro 
+4 Utilitário 
+5 Van 
+6 Caminhão com baú 
+Log de passagem pelo sensor da 
+cancela indicando entrada no 
+bloqueio. 
+Log de passagem pelo sensor da 
+cancela indicando saída no bloqueio. 
+ 
+ 
+ 
+ 
+KeyAccess - Rua Helena, 418 – 1º andar – 04552-050 – Vila Olímpia – SP – sac@keyaccess.com.br 
+ 
+_________________________________________________________________________________________________________________________________________________ 
+ 
+7 Caminhão sem carreta 
+8 Caminhão com carreta 
+ 
+Tradução das “Action” de cada operação do evento: 
+    LOGISTIC_EVENT_CREATED("Evento de logística criado"),  
+    LOGISTIC_EVENT_UPDATED("Evento de logística atualizado"), 
+    LOGISTIC_DRIVER_ENTRY_REGISTRATION_WAITING_FOR_APPROVED("Motorista {invite} pediu para participar do evento"), 
+    LOGISTIC_DRIVER_ENTRY_REGISTRATION_APPROVED("{host} autorizou o motorista {invite} a participar do evento"), 
+    LOGISTIC_DRIVER_ENTRY_REGISTRATION_DENY("{host} não autorizou o motorista {invite} a participar do evento"), 
+    LOGISTIC_DRIVER_ENTRY_CHECKIN_DONE("Motorista {invite} fez checkin"), 
+    LOGISTIC_DRIVER_ENTRY_WAITING_FOR_RELEASE("Motorista \"{name}\" pediu autorização de entrada ao 
+empreendimento"), 
+    LOGISTIC_DRIVER_ENTRY_RELEASE_DONE("{host} autorizou a entrada do motorista {invite} ao empreendimento"), 
+    LOGISTIC_DRIVER_ENTRY_RELEASE_DENY("{host} não autorizou a entrada do motorista {invite} ao empreendimento"), 
+    LOGISTIC_DRIVER_ENTRY_MULTICHECKIN_DONE("Motorista {invite} fez novo checkin no mesmo evento"), 
+    LOGISTIC_ASSISTANT_ENTRY_REGISTRATION_WAITING_FOR_APPROVED("Ajudante {invite} pediu para participar do 
+evento"), 
+    LOGISTIC_ASSISTANT_ENTRY_REGISTRATION_APPROVED("{host} autorizou o ajudante {invite} a participar do evento"), 
+    LOGISTIC_ASSISTANT_ENTRY_REGISTRATION_DENY("{host} não autorizou o ajudante {invite} a participar do evento"), 
+    LOGISTIC_ASSISTANT_ENTRY_CHECKIN_DONE("Ajudante {invite} fez checkin"), 
+    LOGISTIC_ASSISTANT_ENTRY_WAITING_FOR_RELEASE("Ajudante \"{name}\" pediu autorização de entrada ao 
+empreendimento"), 
+    LOGISTIC_ASSISTANT_ENTRY_RELEASE_DONE("{host} autorizou a entrada do ajudante {invite} ao empreendimento"), 
+    LOGISTIC_ASSISTANT_ENTRY_RELEASE_DENY("{host} não autorizou a entrada do ajudante {invite} ao empreendimento"), 
+    LOGISTIC_ASSISTANT_ENTRY_MULTICHECKIN_DONE("Ajudante {invite} fez novo checkin no mesmo evento"), 
+    LOGISTIC_DRIVER_EXIT_APPROVED("Registro de saída de motorista aprovado"), 
+    LOGISTIC_DRIVER_EXIT_RELEASED_MANUALLY("Registro de saída de motorista liberado manualmente"), 
+    LOGISTIC_DRIVER_EXIT_RELEASED_BY_SENSOR("Registro de saída de motorista liberado por sensor"), 
+    LOGISTIC_DRIVER_ADDED_ASSISTANT("Motorista incluiu \"{name}\" como ajudante"), 
+    VO_INVITED_ADDED_ESCORT("Convidado {accompanied} incluiu {invite} como acompanhante"), 
+    LG_DVR_DC_ENT_REQ("Motorista \"{name}\" solicitou acesso à entrada de veículos."), 
+    LG_DVR_DC_ENT_REQ_TOUT("Desistência de acesso do Motorista à entrada de veículos. Tempo de espera esgotado."), 
+    LG_DVR_DC_ENT_ACK_ALM_MANUALLY("Baixa manual da solicitação de acesso do Motorista à entrada de veículos."), 
+    LG_DVR_DC_ENT_ACK_ALM_SENSOR("Confirmação por sensor da passagem do motorista \"{name}\" na entrada de 
+veículos."), 
+    LG_DVR_DC_EXT_REQ("Motorista \"{name}\" solicitou acesso à saída de veículos."), 
+    LG_DVR_DC_EXT_REQ_TOUT("Desistência de acesso do Motorista à saída de veículos. Tempo de espera esgotado."), 
+    LG_DVR_DC_EXT_ACK_ALM_MANUALLY("Baixa manual da solicitação de acesso do Motorista à saída de veículos."), 
+    LG_DVR_DC_EXT_ACK_ALM_SENSOR("Confirmação por sensor da passagem do motorista \"{name}\" na saída de veículos."), 
+    LG_ASTT_DC_ENT_REQ("Ajudante \"{name}\" solicitou acesso à entrada de veículos."), 
+    LG_ASTT_DC_ENT_REQ_TOUT("Desistência de acesso do Ajudante à entrada de veículos. Tempo de espera esgotado."), 
+    LG_ASTT_DC_ENT_ACK_ALM_MANUALLY("Baixa manual da solicitação de acesso do Ajudante à entrada de veículos."), 
+    LG_ASTT_DC_ENT_ACK_ALM_SENSOR("Confirmação por sensor da passagem do ajudante \"{name}\" na entrada de 
+veículos."), 
+    LG_ASTT_DC_EXT_REQ("Ajudante \"{name}\" solicitou acesso à saída de veículos."), 
+    LG_ASTT_DC_EXT_REQ_TOUT("Desistência de acesso do Ajudante à saída de veículos. Tempo de espera esgotado."), 
+    LG_ASTT_DC_EXT_ACK_ALM_MANUALLY("Baixa manual da solicitação de acesso do Ajudante à saída de veículos."), 
+    LG_ASTT_DC_EXT_ACK_ALM_SENSOR("Confirmação por sensor da passagem do motorista \"{name}\" na saída de 
+veículos."), 
+    LG_VISIT_DC_ENT_REQ_TOUT("Desistência de acesso do Visitante à entrada de veículos. Tempo de espera esgotado."), 
+    LG_VISIT_DC_ENT_ACK_ALM_SENSOR("Confirmação por sensor da passagem do visitante \"{name}\" na entrada de 
+veículos."), 
+    LG_VISIT_DC_ENT_ACK_ALM_MANUALLY("Baixa manual da solicitação de acesso do visitante à entrada de veículos."), 
+    LG_VISIT_DC_EXT_REQ_TOUT("Desistência de acesso do Visitante à saída de veículos. Tempo de espera esgotado."), 
+    LG_VISIT_DC_EXT_ACK_ALM_SENSOR("Confirmação por sensor da passagem do visitante \"{name}\" na saída de veículos."), 
+    LG_VISIT_DC_EXT_ACK_ALM_MANUALLY("Baixa manual da solicitação de acesso do visitante à saída de veículos."), 
+    LG_DVR_DC_ENT_REQ_ENF("Motorista \"{name}\" solicitou acesso à saída de veículos sem saída aprovada pela empresa."), 
+    LG_ASTT_DC_ENT_REQ_ENF("Ajudante \"{name}\" solicitou acesso à saída de veículos sem saída aprovada pela empresa."), 
+    LG_VISIT_DC_ENT_REQ_ENF("Visitante \"{name}\" solicitou acesso à saída de veículos sem saída aprovada pela empresa."), 
+    LG_DVR_DC_EXT_REQ_ENF("Motorista \"{name}\" solicitou acesso à saída de veículos sem saída aprovada pela empresa."), 
+    LG_ASTT_DC_EXT_REQ_ENF("Ajudante \"{name}\" solicitou acesso à saída de veículos sem saída aprovada pela empresa."), 
+    LG_VISIT_DC_EXT_REQ_ENF("Visitante \"{name}\" solicitou acesso à saída de veículos sem saída aprovada pela empresa."), 
+ 
+ 
+ 
+ 
+KeyAccess - Rua Helena, 418 – 1º andar – 04552-050 – Vila Olímpia – SP – sac@keyaccess.com.br 
+ 
+_________________________________________________________________________________________________________________________________________________ 
+ 
+    LG_EVENT_REQUESTED("Motorista {invite} solicitou a criação do evento."), 
+    LG_EVENT_APPROVED("Anfitrião {host} autorizou a criação do evento e a entrada do motorista {invite} ao 
+empreendimento."), 
+    LG_EVENT_DENIED("Anfitrião {host} não autorizou a criação do evento e a entrada do motorista {invite} ao 
+empreendimento."), 
+    LG_DRIVER_ADDED("Expedição {host} incluiu {invite} como motorista"), 
+    LG_ASTT_ADDED("Expedição {host} incluiu {invite} como ajudante"), 
+    LG_DRIVER_REMOVED("Expedição {host} removeu {invite} como motorista"), 
+    LG_ASTT_REMOVED("Expedição {host} removeu {invite} como ajudante"), 
+    VO_EVENT_CREATED("Anfitrião {host} criou o evento"),  
+    VO_EVENT_UPDATED("Anfitrião {host} atualizou o evento"), 
+    VO_EVENT_CANCELED("Anfitrião {host} cancelou o evento"), 
+    VO_EVENT_REQUESTED("Convidado {invite} solicitou a criação do evento."), 
+    VO_EVENT_APPROVED("Anfitrião {host} autorizou a criação do evento e a entrada do {invite} ao empreendimento."), 
+    VO_EVENT_DENIED("Anfitrião {host} não autorizou a criação do evento e a entrada do {invite} ao empreendimento."), 
+    VO_EVENT_ENDED("Evento finalizado"), 
+    VO_INVITE_CREATED("Anfitrião {host} convidou {invite} a participar do evento."), 
+    VO_HOST_CREATED("Anfitrião {host} adicionou o anfitrião {invite} ao evento."), 
+    VO_HOST_REMOVED("Anfitrião {host} removeu o anfitrião {invite} do evento."), 
+    VO_INVITE_REMOVED("Anfitrião {host} removeu o convidado {invite} do evento."), 
+    VO_INVITE_APPROVED("Anfitrião {host} autorizou convidado {invite} a participar do evento."), 
+    VO_INVITE_NOT_APPROVED("Anfitrião {host} não autorizou convidado {invite} a participar do evento."), 
+    VO_INVITE_RELEASED("Anfitrião {host} autorizou a entrada do convidado {invite} ao empreendimento."), 
+    VO_INVITE_DENIED("Anfitrião {host} não autorizou a entrada do convidado {invite} ao empreendimento."), 
+    VO_INVITE_QR_PRINTED("QRCode de {invite} gerado"), 
+    VO_INVITE_CHECKIN_DONE("Checkin de {invite} foi feito"), 
+    VO_INVITE_WAITING_FOR_APPROVE("Convidado {invite} pediu para participar do evento."), 
+    VO_INVITE_WAITING_FOR_RELEASE("Convidado {invite} pediu autorização de entrada ao empreendimento.") 
+ 

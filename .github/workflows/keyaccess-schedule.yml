@@ -1,0 +1,49 @@
+# KeyAccess: agendamento do process_and_send.py (planilha -> API)
+# Executa no horário definido e também pode ser disparado manualmente.
+#
+# Secrets obrigatórios (Settings > Secrets and variables > Actions):
+#   KEYACCESS_CLIENT_ID          - ClientID da API
+#   KEYACCESS_CLIENT_SECRET      - ClientKey da API
+#   KEYACCESS_COMPANY_INSTANCE   - companyInstance (ex: companylogsbcshopee)
+#   KEYACCESS_SPREADSHEET_ID     - ID da planilha Google (ex: 1LUunSuW8y...)
+#   KEYACCESS_HOST_REF_ID        - Host Reference ID (ex: 11)
+#   GCP_SERVICE_ACCOUNT_JSON     - Conteúdo completo do JSON da service account (Google Sheets)
+
+name: KeyAccess - Processar e enviar
+
+on:
+  schedule:
+    # Executa todo dia às 08:00 UTC (05:00 BRT)
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+    # Permite rodar manualmente em Actions > KeyAccess - Processar e enviar > Run workflow
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Create service account file
+        run: printf '%s' "$GCP_SA_JSON" > service_account.json
+        env:
+          GCP_SA_JSON: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
+
+      - name: Run process_and_send
+        env:
+          KEYACCESS_CLIENT_ID: ${{ secrets.KEYACCESS_CLIENT_ID }}
+          KEYACCESS_CLIENT_SECRET: ${{ secrets.KEYACCESS_CLIENT_SECRET }}
+          KEYACCESS_COMPANY_INSTANCE: ${{ secrets.KEYACCESS_COMPANY_INSTANCE }}
+          KEYACCESS_SPREADSHEET_ID: ${{ secrets.KEYACCESS_SPREADSHEET_ID }}
+          KEYACCESS_HOST_REF_ID: ${{ secrets.KEYACCESS_HOST_REF_ID }}
+          # Opcional: KEYACCESS_BASE_URL, KEYACCESS_AUTH_URL (já têm default no config)
+        run: python process_and_send.py
