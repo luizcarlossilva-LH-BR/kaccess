@@ -148,13 +148,13 @@ def main():
             "endAt": end_at,
             "behavior": behavior,
             "target": "LOGISTIC",
-            "autoRelease": False, # Default from PDF
+            "autoRelease": True, # pre autorizado
             "hostRefId": config.HOST_REF_ID,
             "driver": {
                 "fullName": str(row['driver_name']),
                 "document": cpf_formatted,
                 "licensePlateOne": str(row['placa_veiculo']),
-                "onFoot": False
+                "onFoot": True # pre autorizado
             },
             "assistants": []
         }
