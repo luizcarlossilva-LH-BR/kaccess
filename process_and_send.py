@@ -154,7 +154,7 @@ def main():
                 "fullName": str(row['driver_name']),
                 "document": cpf_formatted,
                 "licensePlateOne": str(row['placa_veiculo']),
-                "onFoot": True # pre autorizado
+                "onFoot": False # pre autorizado
             },
             "assistants": []
         }
