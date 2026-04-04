@@ -17,14 +17,14 @@ def format_date_iso(date_str, time_str, is_end=False):
         # User data format: 2026-02-03
         dt_str = f"{date_str} {time_str}"
         dt = datetime.datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
-        
+
         # Set timezone to Sao Paulo
         local_tz = ZoneInfo("America/Sao_Paulo")
         dt_local = dt.replace(tzinfo=local_tz)
-        
+
         # Convert to UTC
         dt_utc = dt_local.astimezone(ZoneInfo("UTC"))
-        
+
         return dt_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
     except ValueError:
         # Fallback if formats differ
@@ -61,7 +61,7 @@ def main():
             return
 
 
-        
+
         # Find the header row
         header_row_index = -1
         for i, row in enumerate(values):
@@ -71,7 +71,7 @@ def main():
             if "titulo" in row_str or "sentido" in row_str:
                 header_row_index = i
                 break
-        
+
         if header_row_index == -1:
             print("Error: Could not find header row with 'Titulo' or 'sentido'.")
 
@@ -79,11 +79,11 @@ def main():
 
         headers = values[header_row_index]
 
-        
+
         # Data starts after header
         data_rows = values[header_row_index+1:]
 
-        
+
         # Pad or truncate rows to ensure they match header length
         max_cols = len(headers)
         cleaned_rows = []
@@ -95,15 +95,15 @@ def main():
             elif len(row) > max_cols:
                 row = row[:max_cols]
             cleaned_rows.append(row)
-            
+
         df = pd.DataFrame(cleaned_rows, columns=headers)
-        
+
         # Strip whitespace from headers just in case
         df.columns = df.columns.str.strip()
 
         # Ensure we have the expected columns or map them if needed
         # (The user script uses specific column names like 'sentido', 'data', etc.)
-        
+
     except Exception as e:
         print(f"Error reading from Google Sheets: {e}")
         return
@@ -111,37 +111,40 @@ def main():
     # 4. Process Rows
     success_count = 0
     fail_count = 0
-    
+
     print(f"Processing {len(df)} rows...")
-    
+
     for index, row in df.iterrows():
         print(f"\n--- Row {index + 1} ---")
-        
+
         # Determine Behavior (ENTRY/EXIT)
         behavior = "ENTRY" # Default as per most rows
         if str(row['sentido']).upper().strip() == "SAIDA":
              behavior = "EXIT"
-        
+
         # Format Dates
         start_at = format_date_iso(row['data'], row['hora_inicio'])
         end_at = format_date_iso(row['data'], row['hora_fim'], is_end=True)
-        
+
         # CPF Cleaning and Padding
         raw_cpf = str(row['cpf']).replace(".", "").replace("-", "").strip()
         # Ensure it has at least 11 digits (pad with zeros if pandas stripped them or csv was raw)
         cpf_formatted = raw_cpf.zfill(11)
-        
+
         if not start_at or not end_at:
             print("Skipping due to date error.")
             fail_count += 1
             continue
+
+        # multiCheckin: lê coluna 'multichein' da planilha; "SIM" -> True
+        multi_checkin = str(row.get('multichein', 'NÃO')).upper().strip() == "SIM"
 
         # Build payload
         # Note: 'titulo' in CSV is mapped to 'title'
         # 'driver_name' -> driver.fullName
         # 'cpf' -> driver.document
         # 'placa_veiculo' -> driver.licensePlateOne
-        
+
         payload = {
             "title": str(row['Titulo']),
             "startAt": start_at,
@@ -149,6 +152,7 @@ def main():
             "behavior": behavior,
             "target": "LOGISTIC",
             "autoRelease": True, # pre autorizado
+            "multiCheckin": multi_checkin,
             "hostRefId": config.HOST_REF_ID,
             "driver": {
                 "fullName": str(row['driver_name']),
@@ -158,11 +162,11 @@ def main():
             },
             "assistants": []
         }
-        
+
         # Add Assistant if present (nome_ajudante is not '-' and not empty)
         ajudante = str(row['nome_ajudante']).strip()
         doc_ajudante = str(row['doc_ajudante']).strip()
-        
+
         if ajudante and ajudante != "-" and ajudante.lower() != "nan":
              assistant_data = {
                  "fullName": ajudante,
@@ -171,10 +175,10 @@ def main():
              payload["assistants"].append(assistant_data)
 
         print(f"Sending event for driver: {row['driver_name']}")
-        
+
         # Call API
         result = client.create_event(payload)
-        
+
         if result:
             print("SUCCESS! Event Created.")
             # If entry, maybe print the fullPathLocator
