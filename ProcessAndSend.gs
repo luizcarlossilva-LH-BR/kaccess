@@ -2,39 +2,53 @@
  * KeyAccess - Processar planilha e enviar eventos (Google Apps Script)
  * Equivalente ao process_and_send.py, rodando direto no GCP/Google Sheets.
  *
- * CONFIGURAÇÃO:
- * 1. Em "Project Settings" > "Script Properties", adicione:
- *    - KEYACCESS_CLIENT_ID
- *    - KEYACCESS_CLIENT_SECRET
- *    - KEYACCESS_COMPANY_INSTANCE
- *    - KEYACCESS_BASE_URL (ex: https://api.visitantes.online/api)
- *    - KEYACCESS_AUTH_URL (ex: https://visitantes.online/auth/login/client)
- *    - KEYACCESS_HOST_REF_ID (ex: 11)
- * 2. Ou altere os defaults abaixo e use getDefaultConfig().
+ * CONFIGURAÇÃO (OBRIGATÓRIO antes de usar):
+ * 1. Em "Project Settings" > "Script Properties", adicione as chaves abaixo:
+ *    - KEYACCESS_CLIENT_ID         (ex: companyshopee)
+ *    - KEYACCESS_CLIENT_SECRET     (chave secreta fornecida pela equipe KeyAccess)
+ *    - KEYACCESS_COMPANY_INSTANCE  (ex: companylogsbcshopee)
+ *    - KEYACCESS_HOST_REF_ID       (ex: 2559690)
+ *    - KEYACCESS_SPREADSHEET_ID    (ID da planilha Google, opcional se abrir pelo menu)
+ * 2. Opcionalmente, defina também:
+ *    - KEYACCESS_BASE_URL  (padrão: https://api.visitantes.online/api)
+ *    - KEYACCESS_AUTH_URL  (padrão: https://visitantes.online/auth/login/client)
+ *
+ * ATENÇÃO: NÃO coloque credenciais diretamente no código.
+ *          Use exclusivamente as Script Properties acima.
  */
 
-// Valores padrão (produção). Script Properties sobrescrevem estes.
-var CONFIG = {
-  CLIENT_ID: 'companyshopee',
-  CLIENT_SECRET: 'a38a60421c2f1ccba852f6e42',
+// Valores padrão APENAS para URLs públicas (sem credenciais).
+var CONFIG_DEFAULTS = {
   BASE_URL: 'https://api.visitantes.online/api',
   AUTH_URL: 'https://visitantes.online/auth/login/client',
-  COMPANY_INSTANCE_NAME: 'companylogsbcshopee',
-  HOST_REF_ID: 11,
-  SPREADSHEET_ID: '' // Opcional: preencha para usar planilha fixa (ex: 1LUunSuW8yQLSrwT5t1EpX45akyyH3zPj1ojr2rT6qkc)
 };
 
 function getConfig() {
   var p = PropertiesService.getScriptProperties();
   return {
-    clientId: p.getProperty('KEYACCESS_CLIENT_ID') || CONFIG.CLIENT_ID,
-    clientSecret: p.getProperty('KEYACCESS_CLIENT_SECRET') || CONFIG.CLIENT_SECRET,
-    companyInstance: p.getProperty('KEYACCESS_COMPANY_INSTANCE') || CONFIG.COMPANY_INSTANCE_NAME,
-    baseUrl: (p.getProperty('KEYACCESS_BASE_URL') || CONFIG.BASE_URL).replace(/\/$/, ''),
-    authUrl: p.getProperty('KEYACCESS_AUTH_URL') || CONFIG.AUTH_URL,
-    hostRefId: parseInt(p.getProperty('KEYACCESS_HOST_REF_ID') || CONFIG.HOST_REF_ID, 10),
-    spreadsheetId: p.getProperty('KEYACCESS_SPREADSHEET_ID') || CONFIG.SPREADSHEET_ID
+    clientId:        p.getProperty('KEYACCESS_CLIENT_ID')        || '',
+    clientSecret:    p.getProperty('KEYACCESS_CLIENT_SECRET')    || '',
+    companyInstance: p.getProperty('KEYACCESS_COMPANY_INSTANCE') || '',
+    baseUrl:        (p.getProperty('KEYACCESS_BASE_URL')  || CONFIG_DEFAULTS.BASE_URL).replace(/\/$/, ''),
+    authUrl:         p.getProperty('KEYACCESS_AUTH_URL')  || CONFIG_DEFAULTS.AUTH_URL,
+    hostRefId:       parseInt(p.getProperty('KEYACCESS_HOST_REF_ID') || '0', 10),
+    spreadsheetId:   p.getProperty('KEYACCESS_SPREADSHEET_ID') || ''
   };
+}
+
+/**
+ * Valida se todas as propriedades obrigatórias estão configuradas.
+ * @param {Object} config
+ * @returns {string[]} Lista de chaves ausentes (vazia se tudo ok)
+ */
+function getMissingConfigKeys(config) {
+  var required = {
+    'KEYACCESS_CLIENT_ID':        config.clientId,
+    'KEYACCESS_CLIENT_SECRET':    config.clientSecret,
+    'KEYACCESS_COMPANY_INSTANCE': config.companyInstance,
+    'KEYACCESS_HOST_REF_ID':      config.hostRefId
+  };
+  return Object.keys(required).filter(function(k) { return !required[k]; });
 }
 
 /**
@@ -166,8 +180,14 @@ function showResult(msg) {
 
 function main() {
   var config = getConfig();
-  if (!config.clientId || !config.clientSecret) {
-    showResult('ERRO: Configure CLIENT_ID e CLIENT_SECRET no CONFIG (linha 16-17) ou nas Script Properties.');
+
+  // Validação antecipada: falha com mensagem clara se credenciais não configuradas
+  var missing = getMissingConfigKeys(config);
+  if (missing.length > 0) {
+    var msg = 'ERRO DE CONFIGURAÇÃO: As seguintes Script Properties obrigatórias não estão definidas:\n'
+            + missing.join('\n')
+            + '\n\nAcesse: Configurações do projeto > Propriedades do script';
+    showResult(msg);
     return;
   }
 
@@ -246,7 +266,7 @@ function main() {
       endAt: endAt,
       behavior: behavior,
       target: 'LOGISTIC',
-      autoRelease: false,
+      autoRelease: true,
       hostRefId: config.hostRefId,
       driver: {
         fullName: driverName,

@@ -32,9 +32,11 @@ def format_date_iso(date_str, time_str, is_end=False):
         return None
 
 def main():
-    # 1. Check Credentials
-    if not config.CLIENT_ID or config.CLIENT_ID == "YOUR_CLIENT_ID":
-        print("ERROR: Configure KEYACCESS_CLIENT_ID (config.py or env).")
+    # 1. Valida variáveis de ambiente obrigatórias (falha imediata se ausentes)
+    try:
+        config.validate_config()
+    except EnvironmentError as e:
+        print(f"ERRO DE CONFIGURAÇÃO:\n{e}")
         return
 
     # 2. Initialize Client and Login
@@ -137,7 +139,9 @@ def main():
             continue
 
         # multiCheckin: lê coluna 'multichein' da planilha; "SIM" -> True
-        multi_checkin = str(row.get('multichein', 'NÃO')).upper().strip() == "SIM"
+        raw_multi = row.get('multichein', 'NÃO')
+        print(f"[DEBUG] multichein raw value: '{raw_multi}' | type: {type(raw_multi)}")
+        multi_checkin = str(raw_multi).upper().strip() == "SIM"
 
         # Build payload
         # Note: 'titulo' in CSV is mapped to 'title'
@@ -175,6 +179,7 @@ def main():
              payload["assistants"].append(assistant_data)
 
         print(f"Sending event for driver: {row['driver_name']}")
+        print(f"Payload: {payload}")
 
         # Call API
         result = client.create_event(payload)
