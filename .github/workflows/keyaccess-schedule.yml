@@ -6,8 +6,10 @@
 #   KEYACCESS_CLIENT_SECRET      - ClientKey da API
 #   KEYACCESS_COMPANY_INSTANCE   - companyInstance (ex: companylogsbcshopee)
 #   KEYACCESS_SPREADSHEET_ID     - ID da planilha Google (ex: 1LUunSuW8y...)
-#   KEYACCESS_HOST_REF_ID        - Host Reference ID (ex: 11)
 #   GCP_SERVICE_ACCOUNT_JSON     - Conteúdo completo do JSON da service account (Google Sheets)
+#
+# Variáveis (não são secrets — ficam explícitas no log):
+#   KEYACCESS_HOST_REF_ID        - Host Reference ID (ex: 2559690)
 
 name: KeyAccess - Processar e enviar
 
@@ -19,6 +21,9 @@ on:
     - cron: '0 15 * * *'
   workflow_dispatch:
     # Permite rodar manualmente em Actions > KeyAccess - Processar e enviar > Run workflow
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   run:
@@ -46,6 +51,6 @@ jobs:
           KEYACCESS_CLIENT_SECRET: ${{ secrets.KEYACCESS_CLIENT_SECRET }}
           KEYACCESS_COMPANY_INSTANCE: ${{ secrets.KEYACCESS_COMPANY_INSTANCE }}
           KEYACCESS_SPREADSHEET_ID: ${{ secrets.KEYACCESS_SPREADSHEET_ID }}
-          KEYACCESS_HOST_REF_ID: ${{ secrets.KEYACCESS_HOST_REF_ID }}
+          KEYACCESS_HOST_REF_ID: ${{ vars.KEYACCESS_HOST_REF_ID }}
           # Opcional: KEYACCESS_BASE_URL, KEYACCESS_AUTH_URL (já têm default no config)
         run: python process_and_send.py
