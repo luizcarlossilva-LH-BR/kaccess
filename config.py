@@ -36,7 +36,7 @@ AUTH_URL = _env("KEYACCESS_AUTH_URL", "https://visitantes.online/auth/login/clie
 HOST_REF_ID          = _env_int("KEYACCESS_HOST_REF_ID", 2559690)
 SPREADSHEET_ID       = _env("KEYACCESS_SPREADSHEET_ID")
 SERVICE_ACCOUNT_FILE = _env("KEYACCESS_SERVICE_ACCOUNT_FILE", "service_account.json")
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 # --- Validação antecipada: falha imediata se variáveis obrigatórias estiverem ausentes ---
 _REQUIRED = {
